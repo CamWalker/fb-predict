@@ -42,12 +42,13 @@ class App extends Component {
   }
 
   transformData = () => {
+    console.log('Processing data');
     this.posts = _.filter(this.posts, (row) => {
       const dateYear = _.toNumber(_.split(_.get(row, 'created_time'), '-')[0]);
-      return _.has(row, 'likes') && dateYear > 2012
+      return _.has(row, 'likes') && dateYear >= 2012
     })
     const summaryInfo = calculateSummaryInfo(this.posts);
-    const transformedIOData = _.map(this.posts, (row) => transformDataIO(row, summaryInfo));
+    const transformedIOData = _.map(this.posts, (row, index) => transformDataIO(row, summaryInfo, _.get(_.get(this.posts, (index + 1), {}), 'created_time', null)));
     this.network.train(transformedIOData, {
       errorThresh: 0.005,  // error threshold to reach
       iterations: 20000,   // maximum training iterations
@@ -56,14 +57,52 @@ class App extends Component {
       learningRate: 0.3    // learning rate
     });
 
-    console.log(this.network.toJSON());
-
     const output = this.network.run({
       reactionCount: 1,
-      commentCount: 0,
+      commentCount: 1,
     });
 
-    console.log(output);
+    const keyWords = {};
+
+    _.forEach(_.filter(_.keys(output), (value) => {
+        return _.head(_.split(value, '-')) === 'kw';
+      }), (key) => {
+        keyWords[key] = output[key] * 100;
+      }
+    );
+
+    console.log({
+      dayOfWeek: {
+        Monday: output.Monday * 100,
+        Tuesday: output.Tuesday * 100,
+        Wednesday: output.Wednesday * 100,
+        Thursday: output.Thursday * 100,
+        Friday: output.Friday * 100,
+        Saturday: output.Saturday * 100,
+        Sunday: output.Sunday * 100,
+      },
+      hoursFromLastPost: output.timeFromLastPost * Math.pow(10, summaryInfo.timeFromLastPostPlaceValue) / 60000 / 60,
+      timeOfDay: output.minutesOfDay * 24,
+      postMessage: {
+        postLength: output.postLength * Math.pow(10, summaryInfo.postLengthPlaceValue),
+        keyWords,
+        sentenceType: {
+          assertive: output.assertive * 100,
+        	negative: output.negative * 100,
+        	interrogative: output.interrogative * 100,
+        	imperative: output.imperative * 100,
+        	exclamatory: output.exclamatory * 100,
+        }
+      },
+      postType: {
+        status: output.status * 100,
+        link: output.link * 100,
+        photo: output.photo * 100,
+        video: output.video * 100,
+        event: output.event * 100,
+        offer: output.offer * 100,
+      },
+    });
 
     // const output = this.network.run({
     //   //Status type -- link, status, photo, video, offer
@@ -122,132 +161,3 @@ class App extends Component {
 }
 
 export default App;
-
-const exclusions = [
-  'a',
-  'aboard',
-  'about',
-  'above',
-  'across',
-  'after',
-  'against',
-  'all',
-  'along',
-  'alongside',
-  'although',
-  'amid',
-  'among',
-  'an',
-  'and',
-  'around',
-  'as if',
-  'as long as',
-  'as',
-  'at',
-  'bar',
-  'because',
-  'before',
-  'behind',
-  'below',
-  'beneath',
-  'beside',
-  'besides',
-  'between',
-  'beyond',
-  'but',
-  'by',
-  'come',
-  'down',
-  'during',
-  'even if',
-  'even though',
-  'except',
-  'for',
-  'from',
-  'he',
-  'her',
-  'hers',
-  'herself',
-  'him',
-  'himself',
-  'his',
-  'i',
-  'in',
-  'inside',
-  'into',
-  'it',
-  'itself',
-  'less',
-  'like',
-  'me',
-  'mine',
-  'minus',
-  'my',
-  'myself',
-  'near',
-  'nor',
-  'not',
-  'of',
-  'off',
-  'on',
-  'once',
-  'one',
-  'onto',
-  'opposite',
-  'or',
-  'ours',
-  'ourselves',
-  'out',
-  'outside',
-  'over',
-  'past',
-  'per',
-  'she',
-  'short',
-  'since',
-  'so that',
-  'so',
-  'than',
-  'that',
-  'the',
-  'their',
-  'theirs',
-  'them',
-  'themselves',
-  'there',
-  'these',
-  'they',
-  'this',
-  'those',
-  'though',
-  'through',
-  'throughout',
-  'till',
-  'to',
-  'toward',
-  'towards',
-  'under',
-  'underneath',
-  'unless',
-  'unlike',
-  'until',
-  'up',
-  'upon',
-  'us',
-  'we',
-  'what',
-  'when',
-  'whenever',
-  'wherever',
-  'whether',
-  'while',
-  'will',
-  'with',
-  'within',
-  'without',
-  'would',
-  'yet',
-  'you',
-  'yours',
-  'yourself',
-]
