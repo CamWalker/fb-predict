@@ -17,21 +17,21 @@ const calculateSummaryInfo = (inputData) => {
     }
     return max > _.get(value.reactions.summary, 'total_count', 0) ? max : _.get(value.reactions.summary, 'total_count', 0);
   }, 0);
-  const reactionPlaceValue = Math.log(maxReaction) * Math.LOG10E + 1 | 0;
+  // const reactionPlaceValue = Math.log(maxReaction) * Math.LOG10E + 1 | 0;
 
 
   //calculate comment decimal place
   const maxComment = _.reduce(inputData, (max, value) => {
     return max > _.get(value.comments.summary, 'total_count', 0) ? max : _.get(value.comments.summary, 'total_count', 0);
   }, 0);
-  const commentPlaceValue = Math.log(maxComment) * Math.LOG10E + 1 | 0;
+  // const commentPlaceValue = Math.log(maxComment) * Math.LOG10E + 1 | 0;
 
 
   //calculate post length decimal place
   const maxPostLength = _.reduce(inputData, (max, value) => {
     return max > _.get(value.message, 'length', 0) ? max : _.get(value.message, 'length', 0);
   }, 0);
-  const postLengthPlaceValue = Math.log(maxPostLength) * Math.LOG10E + 1 | 0;
+  // const postLengthPlaceValue = Math.log(maxPostLength) * Math.LOG10E + 1 | 0;
 
 
   //calculate timeFromLastPost decimal place
@@ -45,7 +45,7 @@ const calculateSummaryInfo = (inputData) => {
     }
     return max > postDate - previousPostDate ? max : postDate - previousPostDate;
   }, 0);
-  const timeFromLastPostPlaceValue = Math.log(maxTimeFromLastPost) * Math.LOG10E + 1 | 0;
+  // const timeFromLastPostPlaceValue = Math.log(maxTimeFromLastPost) * Math.LOG10E + 1 | 0;
 
 
   //calculate word frequency
@@ -63,10 +63,10 @@ const calculateSummaryInfo = (inputData) => {
 
 
   return {
-    reactionPlaceValue,
-    commentPlaceValue,
-    postLengthPlaceValue,
-    timeFromLastPostPlaceValue,
+    maxReaction,
+    maxComment,
+    maxPostLength,
+    maxTimeFromLastPost,
     keyWords,
     keyWordsMap,
   };
@@ -146,7 +146,7 @@ const transformDataIO = (inputData, summaryInfo, lastPostTime) => {
   } else {
     lastPostCreateTime = new Date(date.getTime());
   }
-  finalData.output.timeFromLastPost = (date - lastPostCreateTime) / Math.pow(10, summaryInfo.timeFromLastPostPlaceValue);
+  finalData.output.timeFromLastPost = (date - lastPostCreateTime) / summaryInfo.maxTimeFromLastPost;
 
   // transform Type
   finalData.output[inputData.type] = 1;
@@ -168,17 +168,17 @@ const transformDataIO = (inputData, summaryInfo, lastPostTime) => {
     }
   })
 
-  finalData.output.postLength = _.size(message) / Math.pow(10, summaryInfo.postLengthPlaceValue);
+  finalData.output.postLength = _.size(message) / summaryInfo.maxPostLength;
 
   // transform Reactions
   if (!_.has(inputData, 'reactions')) {
-    finalData.input.reactionCount = _.toNumber(_.get(inputData.likes.summary, 'total_count', 0)) / Math.pow(10, summaryInfo.reactionPlaceValue);
+    finalData.input.reactionCount = _.toNumber(_.get(inputData.likes.summary, 'total_count', 0)) / summaryInfo.maxReaction;
   } else {
-    finalData.input.reactionCount = _.toNumber(_.get(inputData.reactions.summary, 'total_count', 0)) / Math.pow(10, summaryInfo.reactionPlaceValue);
+    finalData.input.reactionCount = _.toNumber(_.get(inputData.reactions.summary, 'total_count', 0)) / summaryInfo.maxReaction;
   }
 
   // transform Comments
-  finalData.input.commentCount = _.toNumber(_.get(inputData.comments.summary, 'total_count', 0)) / Math.pow(10, summaryInfo.commentPlaceValue);
+  finalData.input.commentCount = _.toNumber(_.get(inputData.comments.summary, 'total_count', 0)) / summaryInfo.maxComment;
 
   return finalData;
 }

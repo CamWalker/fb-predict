@@ -5,10 +5,15 @@
   "dependencies": {
     "axios": "^0.17.1",
     "brain": "^0.7.0",
+    "chart.js": "^2.7.1",
     "lodash": "^4.17.4",
+    "material-ui": "^0.20.0",
+    "material-ui-icons": "^1.0.0-beta.17",
     "react": "^16.2.0",
+    "react-chartjs-2": "^2.6.4",
     "react-dom": "^16.2.0",
     "react-facebook-login": "^3.7.2",
+    "react-router": "^4.2.0",
     "react-scripts": "1.0.17",
     "sentence-type-classifier": "^2.0.0",
     "word-frequency-analyzer": "0.0.1"
