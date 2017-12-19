@@ -9,6 +9,12 @@ import {
   StepLabel,
   StepContent,
 } from 'material-ui/Stepper';
+import SelectField from 'material-ui/SelectField';
+import MenuItem from 'material-ui/MenuItem';
+import TextField from 'material-ui/TextField';
+import DatePicker from 'material-ui/DatePicker';
+import TimePicker from 'material-ui/TimePicker';
+import Checkbox from 'material-ui/Checkbox';
 import CircularProgress from 'material-ui/CircularProgress';
 import Slider from 'material-ui/Slider';
 import Graph from './Graph';
@@ -22,10 +28,19 @@ class Facebook extends Component {
   constructor(props) {
     super(props);
     this.network = new brain.NeuralNetwork();
-    // this.reverseNetwork = new brain.NeuralNetwork();
+    this.reverseNetwork = new brain.NeuralNetwork();
     this.posts = [];
     this.state = {
       stepIndex: 0,
+      changed: false,
+      message: '',
+      date: new Date(),
+      privacy: 'allFriends',
+      complete: false,
+      reactionCount: 1,
+      commentCount: 1,
+      shareCount: 1,
+      result: null,
     };
   }
 
@@ -37,6 +52,7 @@ class Facebook extends Component {
   };
 
   responseFacebook = (response) => {
+    console.log(response);
     this.handleNext();
     this.posts = _.concat(this.posts, response.posts.data);
     if (response.posts.paging) {
@@ -79,14 +95,14 @@ class Facebook extends Component {
       learningRate: 0.3
     });
 
-    // const reverseTransformedIOData = _.map(this.posts, (row, index) => transformDataIO(row, this.summaryInfo, _.get(_.get(this.posts, (index + 1), {}), 'created_time', null), true));
-    // this.reverseNetwork.train(reverseTransformedIOData, {
-    //   errorThresh: 0.005,  // error threshold to reach
-    //   iterations: 5000,   // maximum training iterations
-    //   log: false,           // console.log() progress periodically
-    //   logPeriod: 100,       // number of iterations between logging
-    //   learningRate: 0.5    // learning rate
-    // });
+    const reverseTransformedIOData = _.map(this.posts, (row, index) => transformDataIO(row, this.summaryInfo, _.get(_.get(this.posts, (index + 1), {}), 'created_time', null), true));
+    this.reverseNetwork.train(reverseTransformedIOData, {
+      errorThresh: 0.005,  // error threshold to reach
+      iterations: 5000,   // maximum training iterations
+      log: false,           // console.log() progress periodically
+      logPeriod: 100,       // number of iterations between logging
+      learningRate: 0.5    // learning rate
+    });
 
     this.setState({
       stepIndex: this.state.stepIndex + 1,
@@ -115,9 +131,9 @@ class Facebook extends Component {
     //   commentCount: 0,
     //   shareCount: 0,
     // });
-
     // console.log(result, reactionResult, commentResult, shareResult, noResult);
-    this.setState({ result, complete: true, reactionCount: 1, commentCount: 1, shareCount: 1 });
+
+    this.setState({ result, complete: true });
   }
 
   onFailure = (err) => {
@@ -161,7 +177,52 @@ class Facebook extends Component {
     }
   }
 
+  onPost = () => {
+    // (https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)
+  }
+
   render() {
+    let result;
+    if (this.state.complete) {
+      const linkRegex = /(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&\/=]*)/;
+      const type = this.state.hasVideo ? 'video' : this.state.hasPhoto ? 'photo' : linkRegex.test(this.state.message) ? 'link' : 'status';
+      const post = {
+        created_time: this.state.date.getTime(),
+        message: this.state.message,
+        privacy: {
+          value: this.state.privacy,
+        },
+        type,
+        comments: {
+          summary: {
+            total_count: 0,
+          },
+        },
+        reactions: {
+          summary: {
+            total_count: 0,
+          },
+        },
+        shares: {
+          count: 0,
+        },
+        likes: {
+          summary: {
+            total_count: 0,
+          },
+        },
+      }
+      const reverseTransformedPost = transformDataIO(post, this.summaryInfo, _.get(_.get(this.posts, 0, {}), 'created_time', null), true);
+
+      result = this.reverseNetwork.run(reverseTransformedPost.input);
+      console.log(
+        reverseTransformedPost,
+        result.commentCount * this.summaryInfo.maxComment,
+        result.reactionCount * this.summaryInfo.maxReaction,
+        result.shareCount * this.summaryInfo.maxShares
+      );
+    }
+
     return (
       <div className="App">
         <Stepper activeStep={this.state.stepIndex} orientation="vertical">
@@ -191,6 +252,46 @@ class Facebook extends Component {
             </StepContent>
           </Step>
         </Stepper>
+        {this.state.complete &&
+          <div>
+            <TextField
+              value={this.state.message}
+              multiLine={true}
+              rows={6}
+              rowsMax={6}
+              onChange={(e, newValue) => this.setState({ changed: true, message: newValue })}
+            />
+            <DatePicker
+              value={this.state.date}
+              onChange={(e, newValue) => this.setState({ changed: true, date: newValue })}
+            />
+            <TimePicker
+              value={this.state.date}
+              onChange={(e, newValue) => this.setState({ changed: true, date: newValue })}
+            />
+            <Checkbox
+              label="Includes Photo"
+              checked={this.state.hasPhoto}
+              onCheck={(e, isChecked) => this.setState({ hasPhoto: isChecked })}
+            />
+            <Checkbox
+              label="Includes Video"
+              checked={this.state.hasVideo}
+              onCheck={(e, isChecked) => this.setState({ hasVideo: isChecked })}
+            />
+            <SelectField
+              floatingLabelText="Privacy"
+              value={this.state.privacy}
+              onChange={(e, key, value) => this.setState({ privacy: value })}
+            >
+              <MenuItem value="allFriends" primaryText="All Friends" />
+              <MenuItem value="friendsOfFriends" primaryText="Friends of Friends" />
+              <MenuItem value="everyone" primaryText="Everyone" />
+              <MenuItem value="custom" primaryText="Custom" />
+              <MenuItem value="self" primaryText="Self" />
+            </SelectField>
+          </div>
+        }
         {this.state.complete && <div className="slider-container">
           <div className="sliders">
             <div className="slider-label">Reactions:</div>
