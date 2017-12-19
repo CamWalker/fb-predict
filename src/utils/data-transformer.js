@@ -17,22 +17,20 @@ const calculateSummaryInfo = (inputData) => {
     }
     return max > _.get(value.reactions.summary, 'total_count', 0) ? max : _.get(value.reactions.summary, 'total_count', 0);
   }, 0);
-  // const reactionPlaceValue = Math.log(maxReaction) * Math.LOG10E + 1 | 0;
-
 
   //calculate comment decimal place
   const maxComment = _.reduce(inputData, (max, value) => {
     return max > _.get(value.comments.summary, 'total_count', 0) ? max : _.get(value.comments.summary, 'total_count', 0);
   }, 0);
-  // const commentPlaceValue = Math.log(maxComment) * Math.LOG10E + 1 | 0;
 
+  const maxShares = _.reduce(inputData, (max, value) => {
+    return max > _.get(value.shares, 'count', 0) ? max : _.get(value.shares, 'count', 0);
+  }, 0);
 
   //calculate post length decimal place
   const maxPostLength = _.reduce(inputData, (max, value) => {
     return max > _.get(value.message, 'length', 0) ? max : _.get(value.message, 'length', 0);
   }, 0);
-  // const postLengthPlaceValue = Math.log(maxPostLength) * Math.LOG10E + 1 | 0;
-
 
   //calculate timeFromLastPost decimal place
   const maxTimeFromLastPost = _.reduce(inputData, (max, value, index) => {
@@ -45,11 +43,8 @@ const calculateSummaryInfo = (inputData) => {
     }
     return max > postDate - previousPostDate ? max : postDate - previousPostDate;
   }, 0);
-  // const timeFromLastPostPlaceValue = Math.log(maxTimeFromLastPost) * Math.LOG10E + 1 | 0;
-
 
   //calculate word frequency
-
   let concatText = _.reduce(inputData, (concatString, value) => {
     return concatString + _.get(value, 'message', '');
   }, '');
@@ -61,10 +56,10 @@ const calculateSummaryInfo = (inputData) => {
     keyWordsMap[`kw-${value}`] = 0;
   })
 
-
   return {
     maxReaction,
     maxComment,
+    maxShares,
     maxPostLength,
     maxTimeFromLastPost,
     keyWords,
@@ -72,72 +67,65 @@ const calculateSummaryInfo = (inputData) => {
   };
 }
 
-const transformDataIO = (inputData, summaryInfo, lastPostTime) => {
-  const finalData = {
-    output: {
-      // STATUS type -- link, status, photo, video, offer
-      status: 0,
-      link: 0,
-      photo: 0,
-      video: 0,
-      offer: 0,
-      // DATE
-      // dayOfYear: 0, - discontinued
-      // dayOfMonth: 0, - discontinued
-      Sunday: 0,
-      Monday: 0,
-      Tuesday: 0,
-      Wednesday: 0,
-      Thursday: 0,
-      Friday: 0,
-      Saturday: 0,
-      // TIME
-      minutesOfDay: 0,
-      timeFromLastPost: 0,
-      // TEXT
-      ...summaryInfo.keyWordsMap, // keywords
-      // // sentence type
-      assertive: 0,
-    	negative: 0,
-    	interrogative: 0,
-    	imperative: 0,
-    	exclamatory: 0,
-      postLength: 0,
-      // PRIVACY
-      // allFriends: 0, - discontinued
-      // friendsOfFriends: 0, - discontinued
-      // everyone: 0, - discontinued
-      // custom: 0, - discontinued
-      // self: 0, - discontinued
-    },
-    input: {
-      reactionCount: 0,
-      commentCount: 0,
-    },
+
+const transformDataIO = (inputData, summaryInfo, lastPostTime, reversed = false) => {
+  const output = reversed ? 'input' : 'output';
+  const input = reversed ? 'output' : 'input';
+
+  const finalData = {};
+  finalData[output] = {
+    // STATUS type
+    status: 0,
+    link: 0,
+    photo: 0,
+    video: 0,
+    offer: 0,
+    // DATE
+    Sunday: 0,
+    Monday: 0,
+    Tuesday: 0,
+    Wednesday: 0,
+    Thursday: 0,
+    Friday: 0,
+    Saturday: 0,
+    // TIME
+    minutesOfDay: 0,
+    timeFromLastPost: 0,
+    // TEXT
+    ...summaryInfo.keyWordsMap,
+    // // sentence type
+    assertive: 0,
+    negative: 0,
+    interrogative: 0,
+    imperative: 0,
+    exclamatory: 0,
+    postLength: 0,
+    // PRIVACY
+    allFriends: 0,
+    friendsOfFriends: 0,
+    everyone: 0,
+    custom: 0,
+    self: 0,
   };
+  finalData[input] = {
+    reactionCount: 0,
+    commentCount: 0,
+    shareCount: 0,
+  }
+
+  // PRIVACY
+  finalData[output][_.camelCase(_.get(inputData, 'privacy.value'))] = 1;
 
   // transform Date/Time
   const date = new Date(_.get(inputData, 'created_time'));
 
-  // // DAY OF YEAR - discontinued
-  // const oneDay = 1000 * 60 * 60 * 24;
-  // const dayOfYear = Math.floor((date - (new Date(date.getFullYear(), 0, 0))) / oneDay);
-  // finalData.output.dayOfYear = dayOfYear / summaryInfo.daysInYear;
-
-  // // DAY OF MONTH  - discontinued
-  // const currentMonth = new Date(date.getTime());
-  // currentMonth.setDate(32);
-  // currentMonth.setDate(0);
-  // const daysInMonth = currentMonth.getDate();
-  // finalData.output.dayOfMonth = date.getDate() / daysInMonth;
-
   // // DAY OF WEEK
   var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  finalData.output[days[date.getDay()]] = 1;
+  finalData[output][days[date.getDay()]] = 1;
 
   // // MINUTES OF DAY
   const midnight = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
-  finalData.output.minutesOfDay = (date.getTime() - midnight.getTime()) / 60000 / 1440;
+  finalData[output].minutesOfDay = (date.getTime() - midnight.getTime()) / 60000 / 1440;
 
   // // TIME FROM LAST POST
   let lastPostCreateTime;
@@ -146,17 +134,17 @@ const transformDataIO = (inputData, summaryInfo, lastPostTime) => {
   } else {
     lastPostCreateTime = new Date(date.getTime());
   }
-  finalData.output.timeFromLastPost = (date - lastPostCreateTime) / summaryInfo.maxTimeFromLastPost;
+  finalData[output].timeFromLastPost = (date - lastPostCreateTime) / summaryInfo.maxTimeFromLastPost;
 
   // transform Type
-  finalData.output[inputData.type] = 1;
+  finalData[output][inputData.type] = 1;
 
   // transform Text
   const message = _.get(inputData, 'message', '');
   _.forEach(_.filter(_.uniq(message.tokenizeAndStem()), (value) => {
     return _.includes(summaryInfo.keyWords, value)
   }), (value) => {
-    finalData.output[`kw-${value}`] = 1;
+    finalData[output][`kw-${value}`] = 1;
   });
 
 
@@ -164,21 +152,23 @@ const transformDataIO = (inputData, summaryInfo, lastPostTime) => {
   _.forEach(sentences, (sentence) => {
     if (sentence) {
       const type = sentenceClassifier.classify(sentence);
-      finalData.output[type] = 1;
+      finalData[output][type] = 1;
     }
   })
 
-  finalData.output.postLength = _.size(message) / summaryInfo.maxPostLength;
+  finalData[output].postLength = _.size(message) / summaryInfo.maxPostLength;
 
   // transform Reactions
   if (!_.has(inputData, 'reactions')) {
-    finalData.input.reactionCount = _.toNumber(_.get(inputData.likes.summary, 'total_count', 0)) / summaryInfo.maxReaction;
+    finalData[input].reactionCount = _.toNumber(_.get(inputData.likes.summary, 'total_count', 0)) / summaryInfo.maxReaction;
   } else {
-    finalData.input.reactionCount = _.toNumber(_.get(inputData.reactions.summary, 'total_count', 0)) / summaryInfo.maxReaction;
+    finalData[input].reactionCount = _.toNumber(_.get(inputData.reactions.summary, 'total_count', 0)) / summaryInfo.maxReaction;
   }
 
   // transform Comments
-  finalData.input.commentCount = _.toNumber(_.get(inputData.comments.summary, 'total_count', 0)) / summaryInfo.maxComment;
+  finalData[input].commentCount = _.toNumber(_.get(inputData.comments.summary, 'total_count', 0)) / summaryInfo.maxComment;
+
+  finalData[input].shareCount = _.toNumber(_.get(inputData.shares, 'count', 0)) / summaryInfo.maxShares;
 
   return finalData;
 }
