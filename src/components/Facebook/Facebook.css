@@ -20,3 +20,8 @@
   display: flex;
   flex-direction: column;
 }
+
+.slider-label {
+  height: 70px;
+  padding: 20px 16px 0px 16px;
+}

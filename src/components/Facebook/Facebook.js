@@ -193,14 +193,14 @@ class Facebook extends Component {
         </Stepper>
         {this.state.complete && <div className="slider-container">
           <div className="sliders">
-            <div>Reactions:</div>
-            <div>Comments:</div>
-            <div>Shares:</div>
+            <div className="slider-label">Reactions:</div>
+            <div className="slider-label">Comments:</div>
+            <div className="slider-label">Shares:</div>
           </div>
           <div className="sliders">
-            <Slider style={{width: 200}} step={0.10} value={this.state.reactionCount} onChange={(event, newValue) => this.handleSlide(0, newValue)}/>
-            <Slider style={{width: 200}} step={0.10} value={this.state.commentCount} onChange={(event, newValue) => this.handleSlide(1, newValue)}/>
-            <Slider style={{width: 200}} step={0.10} value={this.state.shareCount} onChange={(event, newValue) => this.handleSlide(2, newValue)}/>
+            <Slider style={{width: 150}} step={0.10} value={this.state.reactionCount} onChange={(event, newValue) => this.handleSlide(0, newValue)}/>
+            <Slider style={{width: 150}} step={0.10} value={this.state.commentCount} onChange={(event, newValue) => this.handleSlide(1, newValue)}/>
+            <Slider style={{width: 150}} step={0.10} value={this.state.shareCount} onChange={(event, newValue) => this.handleSlide(2, newValue)}/>
           </div>
         </div>}
         <Graph result={this.state.result} summaryInfo={this.summaryInfo} />

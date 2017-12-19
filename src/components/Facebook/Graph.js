@@ -6,16 +6,16 @@ import { HorizontalBar, Bar, Polar } from 'react-chartjs-2';
 const style = {
   height: 280,
   width: 500,
-  margin: 20,
-  padding: 20,
+  margin: 6,
+  padding: 6,
   textAlign: 'center',
   display: 'inline-block',
 };
 const style2 = {
   height: 60,
   width: 500,
-  padding: 20,
-  margin: 20,
+  padding: 6,
+  margin: 6,
   textAlign: 'center',
   display: 'inline-block',
 };
@@ -42,7 +42,7 @@ class Graph extends Component {
   render() {
     const { result, summaryInfo } = this.props;
     console.log(result);
-    let barData, sentenceBarData, postTypeData, timeOfDay, timeFromLastPost, postLength;
+    let barData, sentenceBarData, privacyBarData, postTypeData, timeOfDay, timeFromLastPost, postLength;
     if (result) {
       const defaultDataset = {
         backgroundColor: 'rgba(99,132,255,0.2)',
@@ -89,6 +89,21 @@ class Graph extends Component {
             result.interrogative * 100,
             result.imperative * 100,
             result.exclamatory * 100,
+          ],
+        }]
+      };
+
+      privacyBarData = {
+        labels: ['All Friends', 'Friends of Friends', 'Everyone', 'Custom', 'Self'],
+        datasets: [{
+          ...defaultDataset,
+          label: '',
+          data: [
+            result.allFriends * 100,
+            result.friendsOfFriends * 100,
+            result.everyone * 100,
+            result.custom * 100,
+            result.self * 100,
           ],
         }]
       };
@@ -161,6 +176,25 @@ class Graph extends Component {
                       ticks: {
                         min: 0,
                         max: 100,
+                      }
+                    }]
+                  }
+                }}
+                legend={{ display: false }}
+              />
+            </Paper>
+            <Paper style={style} zDepth={1}>
+              <Bar
+              	data={privacyBarData}
+              	width={100}
+              	height={50}
+                options={{
+                  maintainAspectRatio: true,
+                  scales: {
+                    yAxes: [{
+                      ticks: {
+                          min: 0,
+                          max: 100,
                       }
                     }]
                   }
