@@ -159,7 +159,6 @@ const transformDataIO = (inputData, summaryInfo, lastPostTime, reversed = false)
   finalData[output].postLength = _.size(message) / summaryInfo.maxPostLength;
 
   // transform Reactions
-  console.log(inputData, !_.has(inputData, 'reactions'));
   if (!_.has(inputData, 'reactions')) {
     finalData[input].reactionCount = _.toNumber(_.get(inputData.likes.summary, 'total_count', 0)) / summaryInfo.maxReaction;
   } else {

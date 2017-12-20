@@ -52,7 +52,6 @@ class Facebook extends Component {
   };
 
   responseFacebook = (response) => {
-    console.log(response);
     this.handleNext();
     this.posts = _.concat(this.posts, response.posts.data);
     if (response.posts.paging) {
